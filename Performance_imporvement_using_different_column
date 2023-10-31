@@ -1,0 +1,34 @@
+# second method of performance improvement is that we can add the fiscal year column in our fact sales
+monthly table this way the storage will increase but the time will decrease.
+
+with cte1 as (SELECT 
+	s.date, s.product_code, s.sold_quantity,
+    p.product, p.variant,
+    g.gross_price, 
+    round(g.gross_price*s.sold_quantity,2) as gross_price_total,
+    pre.pre_invoice_discount_pct
+    #you cannot use derived queries in one single query you have to create either subqueries or cte
+    #(gross_price_total - gross_price_total*pre.pre_invoice_discount_pct) as net_invoice_sales
+    
+	FROM fact_sales_monthly s
+	join dim_product p
+	on
+    p.product_code = s.product_code
+    
+    join fact_gross_price g 
+    on
+    g.product_code = s.product_code and 
+    g.fiscal_year = s.fiscal_year
+    
+    join fact_pre_invoice_deductions pre
+    on 
+		pre.customer_code = s.customer_code and 
+		pre.fiscal_year = s.fiscal_year
+    
+where 
+	s.fiscal_year = 2021 
+order by date asc
+limit 10000)
+select *,
+ (gross_price_total - gross_price_total*pre_invoice_discount_pct) as net_invoice_sales
+from cte1;
